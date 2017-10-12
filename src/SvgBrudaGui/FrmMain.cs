@@ -229,8 +229,10 @@ namespace SvgBrudaGui
         {
             g.SmoothingMode = _antitaliases[_antialias];
             g.Clear(Color.Black);
-            if (Target != null)
+
+            if (g is GdiGraphics && Target != null)
             {
+                // Only draw the background picture for GDI, not in the SVG.
                 g.DrawImage(Target, 0, 0, rect.Width, rect.Height);
             }
         }
