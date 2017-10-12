@@ -14,17 +14,28 @@ namespace SvgBrudaGui
 
         ReaderWriterLockSlim _lock;
 
-        public Settings() => Initialize();
+        public Settings()
+        {
+            Initialize();
+            InitializeLock();
+        }
 
         [OnDeserializing]
-        void OnDeserialize(StreamingContext _) => Initialize();
+        void OnDeserializing(StreamingContext _) => Initialize();
+
+        [OnDeserialized]
+        void OnDeserialized(StreamingContext _) => InitializeLock();
 
         void Initialize()
         {
             _imagePath = "";
-            _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
             _mutationProbability = 0;
             _populationSize = 2;
+        }
+
+        void InitializeLock()
+        {
+            _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         }
 
         string _imagePath;
@@ -79,27 +90,27 @@ namespace SvgBrudaGui
 
         T GetLocked<T>(Func<T> read)
         {
-            _lock.EnterReadLock();
+            _lock?.EnterReadLock();
             try
             {
                 return read();
             }
             finally
             {
-                _lock.ExitReadLock();
+                _lock?.ExitReadLock();
             }
         }
 
         void SetLocked<T>(ref T field, T value)
         {
-            _lock.EnterWriteLock();
+            _lock?.EnterWriteLock();
             try
             {
                 field = value;
             }
             finally
             {
-                _lock.ExitWriteLock();
+                _lock?.ExitWriteLock();
             }
         }
 
@@ -112,17 +123,26 @@ namespace SvgBrudaGui
 
             var json = new DataContractJsonSerializer(GetType());
 
-            using (var stream = path.OpenWrite())
+            var before = _lock;
+            _lock = null;
+            try
             {
-                _lock.EnterReadLock();
-                try
+                using (var stream = path.OpenWrite())
                 {
-                    json.WriteObject(stream, this);
+                    before.EnterReadLock();
+                    try
+                    {
+                        json.WriteObject(stream, this);
+                    }
+                    finally
+                    {
+                        before.ExitReadLock();
+                    }
                 }
-                finally
-                {
-                    _lock.ExitReadLock();
-                }
+            }
+            finally
+            {
+                _lock = before;
             }
         }
 
