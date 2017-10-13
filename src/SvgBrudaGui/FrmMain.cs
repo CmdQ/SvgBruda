@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
 using SvgNet.SvgGdi;
+using CmdQ.GeneticOptimization;
 
 namespace SvgBrudaGui
 {
@@ -30,6 +31,8 @@ namespace SvgBrudaGui
         string _lastSvgFile;
         FrmSettings _settingsForm;
         Bitmap _target;
+        bool _running;
+        Evolution<Genome, Chromosome> _evolution;
 
         static string UserData
         {
@@ -48,6 +51,39 @@ namespace SvgBrudaGui
             {
                 _target?.Dispose();
                 _target = value;
+            }
+        }
+
+        bool Running
+        {
+            get => _running;
+            set
+            {
+                if (value != _running)
+                {
+                    _running = value;
+
+                    if (_running)
+                    {
+                        Evolution.Start();
+                    }
+                    else
+                    {
+                        Evolution.Pause();
+                    }
+                }
+            }
+        }
+
+        Evolution<Genome, Chromosome> Evolution
+        {
+            get
+            {
+                if (_evolution == null)
+                {
+                    _evolution = new Evolution<Genome, Chromosome>(_settings.PopulationSize);
+                }
+                return _evolution;
             }
         }
 
@@ -129,6 +165,9 @@ namespace SvgBrudaGui
                         File.WriteAllText(file, svg.WriteSVGString());
                         _lastSvgFile = file;
                     }
+                    break;
+                case Keys.Space:
+                    Running = !Running;
                     break;
                 default:
                     base.OnKeyUp(e);
