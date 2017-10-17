@@ -1,11 +1,15 @@
 using System;
+using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using CmdQ.GeneticOptimization;
 
 namespace SvgBrudaGui
 {
     struct Point
     {
+        internal static int _mySize = Marshal.SizeOf<Point>();
+
         public float x;
         public float y;
 
@@ -14,7 +18,24 @@ namespace SvgBrudaGui
 
     public class Chromosome : IChromosome
     {
-        readonly Point[] _points = new Point[3];
+        const int VERTEX_COUNT = 3;
+
+        static readonly int _mySize = VERTEX_COUNT * Point._mySize + sizeof(int);
+
+        readonly Point[] _points = new Point[VERTEX_COUNT];
+
+        Color _color;
+
+        public Chromosome() { }
+
+        internal Chromosome(Point[] points, Color color)
+        {
+            for (int i = 0; i < _points.Length; ++i)
+            {
+                _points[i] = points[i];
+            }
+            _color = color;
+        }
 
         public void Decode(byte[] code)
         {
@@ -22,10 +43,11 @@ namespace SvgBrudaGui
             {
                 _points[i] = new Point
                 {
-                    x = BitConverter.ToSingle(code, (2 * i + 0) * sizeof(float)),
-                    y = BitConverter.ToSingle(code, (2 * i + 1) * sizeof(float))
+                    x = BitConverter.ToSingle(code, i * Point._mySize),
+                    y = BitConverter.ToSingle(code, i * Point._mySize + sizeof(float))
                 };
             }
+            _color = Color.FromArgb(BitConverter.ToInt32(code, code.Length - sizeof(int)));
         }
 
         public void CreateRandom(Random random)
@@ -34,12 +56,14 @@ namespace SvgBrudaGui
             {
                 _points[i] = new Point { x = (float)random.NextDouble(), y = (float)random.NextDouble() };
             }
+            _color = Color.FromArgb(random.Next());
         }
 
         public byte[] Encode()
         {
             return _points
                 .SelectMany(p => BitConverter.GetBytes(p.x).Concat(BitConverter.GetBytes(p.y)))
+                .Concat(BitConverter.GetBytes(_color.ToArgb()))
                 .ToArray();
         }
     }
