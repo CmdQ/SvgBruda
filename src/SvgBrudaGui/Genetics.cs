@@ -1,43 +1,81 @@
 using System;
+using System.Linq;
 using CmdQ.GeneticOptimization;
 
 namespace SvgBrudaGui
 {
+    struct Point
+    {
+        public float x;
+        public float y;
+
+        public override string ToString() => $"{x} / {y}";
+    }
+
     public class Chromosome : IChromosome
     {
+        readonly Point[] _points = new Point[3];
+
         public void Decode(byte[] code)
         {
-            throw new NotImplementedException();
+            for (int i = 0; i < _points.Length; ++i)
+            {
+                _points[i] = new Point
+                {
+                    x = BitConverter.ToSingle(code, (2 * i + 0) * sizeof(float)),
+                    y = BitConverter.ToSingle(code, (2 * i + 1) * sizeof(float))
+                };
+            }
         }
 
-        public void Decode(Random random)
+        public void CreateRandom(Random random)
         {
-            throw new NotImplementedException();
+            for (int i = 0; i < _points.Length; ++i)
+            {
+                _points[i] = new Point { x = (float)random.NextDouble(), y = (float)random.NextDouble() };
+            }
         }
 
         public byte[] Encode()
         {
-            throw new NotImplementedException();
+            return _points
+                .SelectMany(p => BitConverter.GetBytes(p.x).Concat(BitConverter.GetBytes(p.y)))
+                .ToArray();
         }
     }
 
-    public class Genome : IFixedLengthGenome<Chromosome>
+    public class Genome : FixedLengthGenome<Chromosome>
     {
-        public int Length => throw new NotImplementedException();
+        const int TRIANGLES = 99;
 
-        public void Decode(byte[] code)
+        static readonly Chromosome _prototype = new Chromosome();
+        static readonly int _chromosomeLength = _prototype.Encode().Length;
+
+        public Genome()
+            : base(TRIANGLES)
+        { }
+
+        public override void Decode(byte[] code)
         {
-            throw new NotImplementedException();
+            for (int i = 0; i < Chromosomes.Length; ++i)
+            {
+                Chromosomes[i].Decode(code);
+            }
         }
 
-        public void Decode(Random random)
+        public override void Decode(Random random)
         {
-            throw new NotImplementedException();
+            for (int i = 0; i < Chromosomes.Length; ++i)
+            {
+                Chromosomes[i].CreateRandom(random);
+            }
         }
 
-        public byte[] Encode()
+        public override byte[] Encode()
         {
-            throw new NotImplementedException();
+            return Chromosomes
+                .SelectMany(c => c.Encode())
+                .ToArray();
         }
     }
 }

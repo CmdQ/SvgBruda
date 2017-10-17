@@ -8,6 +8,6 @@ namespace CmdQ.GeneticOptimization
 
         void Decode(byte[] code);
 
-        void Decode(Random random);
+        void CreateRandom(Random random);
     }
 }
